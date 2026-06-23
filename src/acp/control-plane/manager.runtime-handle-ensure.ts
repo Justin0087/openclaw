@@ -12,6 +12,7 @@ import type { AcpRuntime, AcpRuntimeHandle } from "@openclaw/acp-core/runtime/ty
 import { resolveRuntimeConfigCacheKey } from "../../config/runtime-snapshot.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { logVerbose } from "../../globals.js";
+import { resolveAcpBackendForAgent } from "../runtime/backend-resolution.js";
 import { toAcpRuntimeError, withAcpRuntimeErrorBoundary } from "../runtime/errors.js";
 import type { ManagerRuntimeHandleCache } from "./manager.runtime-handle-cache.js";
 import type {
@@ -44,7 +45,12 @@ export async function ensureManagerRuntimeHandle(params: {
   const cwd = runtimeOptions.cwd ?? normalizeText(params.meta.cwd);
   const model = normalizeText(runtimeOptions.model);
   const thinking = normalizeText(runtimeOptions.thinking);
-  const configuredBackend = (params.meta.backend || params.cfg.acp?.backend || "").trim();
+  const configuredBackend =
+    resolveAcpBackendForAgent({
+      cfg: params.cfg,
+      agentId: agent,
+      metadataBackend: params.meta.backend,
+    }) ?? "";
   const configSignature = resolveRuntimeConfigCacheKey(params.cfg);
   const cached = params.runtimeHandles.get(params.sessionKey);
   if (cached) {

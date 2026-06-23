@@ -116,6 +116,58 @@ describe("AcpSessionManager backend failover", () => {
     expect(harness.currentMeta.backend).toBe("primary-backend");
   });
 
+  it("prefers an agent runtime ACP backend over stale metadata and global backend", async () => {
+    const runtimeState = createRuntime();
+    runtimeState.ensureSession.mockImplementation(async (input) => ({
+      sessionKey: input.sessionKey,
+      backend: "openclaw-quantum-acp",
+      runtimeSessionName: "quantum-runtime",
+    }));
+    hoisted.requireAcpRuntimeBackendMock.mockImplementation((backendId?: string) => {
+      if (backendId !== "openclaw-quantum-acp") {
+        throw new Error(`unexpected backend ${backendId ?? "<auto>"}`);
+      }
+      return {
+        id: "openclaw-quantum-acp",
+        runtime: runtimeState.runtime,
+      };
+    });
+    const sessionKey = "agent:quantum:acp:session-1";
+    hoisted.readAcpSessionEntryMock.mockReturnValue({
+      sessionKey,
+      storeSessionKey: sessionKey,
+      acp: readySessionMeta({
+        backend: "acpx",
+        agent: "quantum",
+        runtimeSessionName: "stale-runtime",
+      }),
+    });
+    const cfg = {
+      acp: { ...baseCfg.acp, backend: "acpx" },
+      agents: {
+        list: [
+          {
+            id: "quantum",
+            runtime: { type: "acp", acp: { backend: "openclaw-quantum-acp" } },
+          },
+        ],
+      },
+    } as OpenClawConfig;
+
+    const manager = new AcpSessionManager();
+    await manager.runTurn({
+      cfg,
+      sessionKey,
+      text: "pong",
+      mode: "prompt",
+      requestId: "r-quantum",
+    });
+
+    expect(hoisted.requireAcpRuntimeBackendMock).toHaveBeenCalledWith("openclaw-quantum-acp");
+    expect(hoisted.requireAcpRuntimeBackendMock).not.toHaveBeenCalledWith("acpx");
+    expect(runtimeState.runTurn).toHaveBeenCalledTimes(1);
+  });
+
   it("closes cached fallback handles before returning later turns to the primary backend", async () => {
     const harness = setupFailoverBackends();
     harness.primaryRuntime.runTurn.mockImplementationOnce(async function* () {

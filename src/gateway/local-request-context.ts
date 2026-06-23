@@ -10,6 +10,7 @@ import {
   withPluginRuntimeGatewayRequestScope,
 } from "../plugins/runtime/gateway-request-scope.js";
 import { NodeRegistry } from "./node-registry.js";
+import { getGatewayNodeRegistry } from "./node-registry-global.js";
 import type { ChannelRuntimeSnapshot } from "./server-channel-runtime.types.js";
 import { createChatRunEntry, type ChatRunEntry } from "./server-chat-state.js";
 import type { GatewayRequestContext } from "./server-methods/types.js";
@@ -94,7 +95,7 @@ export function createLocalGatewayRequestContext(
     nodeUnsubscribe: () => {},
     nodeUnsubscribeAll: () => {},
     hasConnectedTalkNode: () => false,
-    nodeRegistry: new NodeRegistry(),
+    nodeRegistry: getGatewayNodeRegistry() ?? new NodeRegistry(),
     agentRunSeq: new Map(),
     chatAbortControllers: new Map(),
     chatAbortedRuns: new Map(),

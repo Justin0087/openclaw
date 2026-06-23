@@ -1,6 +1,10 @@
 /** Runs ACP turns, failover, timeout cleanup, and detached-task progress mirroring. */
 import type { AcpRuntime, AcpRuntimeHandle } from "@openclaw/acp-core/runtime/types";
 import { logVerbose } from "../../globals.js";
+import {
+  resolveAcpBackendForAgent,
+  resolveAgentConfiguredAcpBackend,
+} from "../runtime/backend-resolution.js";
 import { AcpRuntimeError, formatAcpErrorChain, toAcpRuntimeError } from "../runtime/errors.js";
 import { clearAcpTurnActive, markAcpTurnActive } from "./active-turns.js";
 import {
@@ -37,7 +41,11 @@ import type {
   SessionAcpMeta,
   WriteManagerSessionMeta,
 } from "./manager.types.js";
-import { normalizeActorKey, requireReadySessionMeta } from "./manager.utils.js";
+import {
+  normalizeActorKey,
+  requireReadySessionMeta,
+  resolveAcpAgentFromSessionKey,
+} from "./manager.utils.js";
 
 const ACP_TURN_TIMEOUT_GRACE_MS = 1_000;
 
@@ -88,8 +96,19 @@ export async function runManagerTurn(params: {
     sessionKey,
   });
   const initialMeta = requireReadySessionMeta(initialResolution);
+  const agentId = initialMeta.agent ?? resolveAcpAgentFromSessionKey(sessionKey, "main");
+  const agentConfiguredBackend = resolveAgentConfiguredAcpBackend({
+    cfg: input.cfg,
+    agentId,
+  });
   const { candidateBackends, describeBackendCandidate } = resolveBackendCandidatePlan({
-    configuredPrimaryBackend: input.cfg.acp?.backend,
+    configuredPrimaryBackend:
+      agentConfiguredBackend ??
+      resolveAcpBackendForAgent({
+        cfg: input.cfg,
+        agentId,
+        metadataBackend: initialMeta.backend,
+      }),
     resolvedPrimaryBackend: initialMeta.backend,
     fallbackBackends: input.cfg.acp?.fallbacks,
   });

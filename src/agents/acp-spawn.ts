@@ -17,6 +17,7 @@ import {
   type AcpSpawnRuntimeCloseHandle,
 } from "../acp/control-plane/spawn.js";
 import { isAcpEnabledByPolicy, resolveAcpAgentPolicyError } from "../acp/policy.js";
+import { resolveAcpBackendForAgent } from "../acp/runtime/backend-resolution.js";
 import { readAcpSessionMeta } from "../acp/runtime/session-meta.js";
 import { DEFAULT_HEARTBEAT_EVERY } from "../auto-reply/heartbeat.js";
 import { formatThinkingLevels } from "../auto-reply/thinking.js";
@@ -1087,7 +1088,10 @@ async function initializeAcpSpawnRuntime(params: {
     resumeSessionId: params.resumeSessionId,
     runtimeOptions: params.runtimeOptions,
     cwd: params.cwd,
-    backendId: params.cfg.acp?.backend,
+    backendId: resolveAcpBackendForAgent({
+      cfg: params.cfg,
+      agentId: params.targetAgentId,
+    }),
   });
 
   return {
