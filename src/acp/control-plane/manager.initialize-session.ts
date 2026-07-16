@@ -8,6 +8,7 @@ import { resolveRuntimeConfigCacheKey } from "../../config/runtime-snapshot.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { logVerbose } from "../../globals.js";
 import { normalizeAgentId } from "../../routing/session-key.js";
+import { resolveAcpBackendForAgent } from "../runtime/backend-resolution.js";
 import { AcpRuntimeError, withAcpRuntimeErrorBoundary } from "../runtime/errors.js";
 import type { ManagerRuntimeHandleCache } from "./manager.runtime-handle-cache.js";
 import type {
@@ -37,9 +38,15 @@ export async function runManagerInitializeSession(params: {
   meta: SessionAcpMeta;
 }> {
   const { input, sessionKey } = params;
-  const backend = params.deps.requireRuntimeBackend(input.backendId || input.cfg.acp?.backend);
-  const runtime = backend.runtime;
   const agent = normalizeAgentId(input.agent);
+  const configuredBackend =
+    normalizeText(input.backendId) ??
+    resolveAcpBackendForAgent({
+      cfg: input.cfg,
+      agentId: agent,
+    });
+  const backend = params.deps.requireRuntimeBackend(configuredBackend);
+  const runtime = backend.runtime;
   const initialRuntimeOptions = validateRuntimeOptionPatch({
     ...input.runtimeOptions,
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),

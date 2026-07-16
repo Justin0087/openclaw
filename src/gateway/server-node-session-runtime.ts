@@ -1,6 +1,7 @@
 // Gateway node session runtime factory.
 // Creates node registry, subscription, and voice-wake fanout state.
 import { NodeRegistry, type SerializedEventPayload } from "./node-registry.js";
+import { setGatewayNodeRegistry } from "./node-registry-global.js";
 import {
   createSessionEventSubscriberRegistry,
   createSessionMessageSubscriberRegistry,
@@ -15,6 +16,7 @@ export function createGatewayNodeSessionRuntime(params: {
   broadcast: (event: string, payload: unknown, opts?: { dropIfSlow?: boolean }) => void;
 }) {
   const nodeRegistry = new NodeRegistry();
+  setGatewayNodeRegistry(nodeRegistry);
   const nodePresenceTimers = new Map<string, ReturnType<typeof setInterval>>();
   const nodeSubscriptions = createNodeSubscriptionManager();
   const sessionEventSubscribers = createSessionEventSubscriberRegistry();

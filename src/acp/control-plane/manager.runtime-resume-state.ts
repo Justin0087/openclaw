@@ -4,6 +4,7 @@ import type { AcpRuntime } from "@openclaw/acp-core/runtime/types";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { logVerbose } from "../../globals.js";
 import { formatErrorMessage, toErrorObject } from "../../infra/errors.js";
+import { resolveAcpBackendForAgent } from "../runtime/backend-resolution.js";
 import type { AcpRuntimeError } from "../runtime/errors.js";
 import type { ManagerRuntimeHandleCache } from "./manager.runtime-handle-cache.js";
 import type {
@@ -11,6 +12,7 @@ import type {
   SessionAcpMeta,
   WriteManagerSessionMeta,
 } from "./manager.types.js";
+import { resolveAcpAgentFromSessionKey } from "./manager.utils.js";
 
 /** Detects acpx exits that are safe to retry with a fresh runtime handle. */
 export function isRecoverableManagerAcpxExitError(message: string): boolean {
@@ -199,7 +201,12 @@ export async function tryPrepareFreshManagerRuntimeSession(params: {
   logPrefix: string;
   missingBackendError?: unknown;
 }): Promise<void> {
-  const configuredBackend = (params.meta.backend || params.cfg.acp?.backend || "").trim();
+  const configuredBackend =
+    resolveAcpBackendForAgent({
+      cfg: params.cfg,
+      agentId: params.meta.agent ?? resolveAcpAgentFromSessionKey(params.sessionKey, "main"),
+      metadataBackend: params.meta.backend,
+    }) ?? "";
   try {
     const backend = params.deps.getRuntimeBackend(configuredBackend || undefined);
     if (!backend) {
